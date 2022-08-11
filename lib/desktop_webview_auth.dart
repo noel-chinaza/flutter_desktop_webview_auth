@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:desktop_webview_auth/src/client.dart';
 import 'package:desktop_webview_auth/src/jsonable.dart';
 import 'package:desktop_webview_auth/src/platform_response.dart';
 import 'package:desktop_webview_auth/src/recaptcha_args.dart';
@@ -7,19 +8,19 @@ import 'package:desktop_webview_auth/src/recaptcha_result.dart';
 import 'package:desktop_webview_auth/src/recaptcha_verification_server.dart';
 import 'package:flutter/services.dart';
 
+import 'google_refresh.dart';
 import 'src/auth_result.dart';
 import 'src/provider_args.dart';
 
+export 'src/auth_result.dart';
 export 'src/provider_args.dart';
 export 'src/recaptcha_args.dart' show RecaptchaArgs;
-export 'src/auth_result.dart';
 export 'src/recaptcha_result.dart';
 
 const _channelName = 'io.invertase.flutter/desktop_webview_auth';
 
 class DesktopWebviewAuth {
-  static final _channel = const MethodChannel(_channelName)
-    ..setMethodCallHandler(_onMethodCall);
+  static final _channel = const MethodChannel(_channelName)..setMethodCallHandler(_onMethodCall);
 
   static late Completer<RecaptchaResult?> _recaptchaVerificationCompleter;
 
@@ -146,9 +147,7 @@ class DesktopWebviewAuth {
 
     await _invokeRecaptchaVerification(invokeArgs, width, height);
 
-    return _recaptchaVerificationCompleter.future
-        .whenComplete(server.close)
-        .timeout(
+    return _recaptchaVerificationCompleter.future.whenComplete(server.close).timeout(
       const Duration(seconds: 60),
       onTimeout: () {
         server.close();
@@ -171,5 +170,13 @@ class DesktopWebviewAuth {
     } catch (_) {
       return null;
     }
+  }
+
+  static Future<AuthResult> getRefreshToken(GoogleRefreshArgs args) async {
+    return await HttpClient.post(args.host, args.path, args.buildQueryParameters());
+  }
+
+  static Future<AuthResult> getAccessToken(GoogleRefreshArgs args) async {
+    return await HttpClient.post(args.host, args.path, args.buildQueryParameters());
   }
 }

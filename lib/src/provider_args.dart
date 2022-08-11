@@ -25,18 +25,20 @@ abstract class ProviderArgs implements Jsonable {
 
   Future<AuthResult?> authorizeFromCallback(String callbackUrl) {
     final uri = Uri.parse(callbackUrl);
-    late Map<String, String> args;
+    late Map<String, dynamic> args;
 
-    if (usesFragment) {
-      args = Uri.splitQueryString(uri.fragment);
-    } else {
-      args = uri.queryParameters;
-    }
+    args = uri.queryParameters;
 
-    if (args.containsKey('access_token') || args.containsKey('id_token')) {
+    if (args.isNotEmpty) {
       final result = AuthResult(
         accessToken: args['access_token'],
         idToken: args['id_token'],
+        code: args['code'],
+        expiresIn: int.parse("${args['expires_in'] ?? '0'}"),
+        refreshToken: args['refresh_token'],
+        scope: args['scope'],
+        tokenType: args['token_type'],
+        tokenSecret: args['token_secret'],
       );
 
       return SynchronousFuture(result);
