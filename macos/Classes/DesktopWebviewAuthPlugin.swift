@@ -3,8 +3,6 @@ import FlutterMacOS
 
 import Foundation
 
-import Cocoa
-import FlutterMacOS
 import WebKit
 
 public class WebviewController: NSViewController, WKNavigationDelegate {
@@ -45,6 +43,12 @@ public class WebviewController: NSViewController, WKNavigationDelegate {
     
     public func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         
+        if navigationAction.navigationType == .formSubmitted {
+            // Call the decisionHandler to allow the navigation to continue
+            decisionHandler(.allow)
+            return
+        }
+
         guard let url = navigationAction.request.url else {
             decisionHandler(.allow);
             return
@@ -52,14 +56,15 @@ public class WebviewController: NSViewController, WKNavigationDelegate {
         
         let uriString = url.absoluteString
         
-        if uriString.contains(targetUriFragment!) {
+        if uriString.contains(targetUriFragment!) { // not called
             decisionHandler(.cancel)
             onComplete!(uriString)
             dismiss(self)
-        } else {
+        } else { // called on init
             decisionHandler(.allow)
         }
     }
+    
     
     public override func viewDidDisappear() {
         onDismissed!();
@@ -85,6 +90,9 @@ public class DesktopWebviewAuthPlugin: NSObject, FlutterPlugin {
         switch call.method {
         case "signIn":
             let args = call.arguments as! NSDictionary
+            
+            print(args["signInUri"])
+            print(args["redirectUri"])
 
             signIn(
                 signInUrl: args["signInUri"] as! String,
@@ -134,7 +142,7 @@ public class DesktopWebviewAuthPlugin: NSObject, FlutterPlugin {
     
     func _openWebview(url: String, flow: String, targetUriFragment: String, width: CGFloat?,
                       height: CGFloat?) {
-
+        
         let appWindow = NSApplication.shared.windows.first!
         let webviewController = WebviewController()
         
@@ -147,13 +155,11 @@ public class DesktopWebviewAuthPlugin: NSObject, FlutterPlugin {
                 "flow": flow,
                 "url": callbackUrl
             ]
-            
             self.channel!.invokeMethod("onCallbackUrlReceived", arguments: arguments)
         }
         
         webviewController.onDismissed = { () -> Void in
-            self.channel!.invokeMethod("onDismissed", arguments: ["flow": flow])
-            
+            self.channel!.invokeMethod("onDismissed", arguments: ["flow": flow])  
         }
 
         webviewController.loadUrl(url)
